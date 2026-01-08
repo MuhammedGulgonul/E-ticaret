@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String?
+  role      String   @default("USER") // USER, ADMIN
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  reviews   Review[]
+  orders    Order[]
+  repairs   RepairRequest[]
+  cart      Cart?
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String
+  price       Decimal
+  category    String // 'PHONE' | 'ACCESSORY'  
+  subCategory String? // e.g., 'CASE', 'CHARGER', 'SCREEN_PROTECTOR'
+  images      String  @default("[]") // JSON array of image paths
+  stock       Int     @default(1)
+  condition   String  @default("NEW") // 'NEW', 'USED', 'ACCESSORY'
+  
+  // Phone Specifics
+  storage       String? // e.g., '128GB'
+  ram           String? // e.g., '8GB'
+  batteryHealth String? // e.g., '95%'
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  reviews     Review[]
+  orderItems  OrderItem[]
+  cartItems   CartItem[]
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  rating    Int
+  comment   String?
+  userId    Int
+  productId Int
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+}
+
+model Order {
+  id              Int         @id @default(autoincrement())
+  orderNumber     String      @unique
+  userId          Int
+  totalAmount     Decimal
+  status          String      @default("PENDING") // PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED
+  shippingAddress String
+  phone           String
+  email           String
+  notes           String?
+  paymentMethod   String      @default("CASH_ON_DELIVERY")
+  paymentStatus   String      @default("PENDING")
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  user            User        @relation(fields: [userId], references: [id])
+  items           OrderItem[]
+}
+
+model OrderItem {
+  id        Int      @id @default(autoincrement())
+  orderId   Int
+  productId Int
+  quantity  Int
+  price     Decimal
+  
+  order     Order    @relation(fields: [orderId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+}
+
+model RepairRequest {
+  id          Int      @id @default(autoincrement())
+  model       String
+  description String
+  status      String   @default("PENDING") // PENDING, QUOTED, APPROVED, IN_PROGRESS, COMPLETED, REJECTED
+  quote       Decimal?
+  userId      Int?
+  contactInfo String?  // For guest users
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User?    @relation(fields: [userId], references: [id])
+}
+
+model Cart {
+  id        Int        @id @default(autoincrement())
+  userId    Int        @unique
+  user      User       @relation(fields: [userId], references: [id])
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id        Int      @id @default(autoincrement())
+  cartId    Int
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
